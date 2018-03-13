@@ -49,7 +49,7 @@ class ImageRetrieval:
         print("filter bank generated")
         self._histogramOfGabors()
 
-    def query(self, query_image, type, target=None, k=10):
+    def query(self, query_image, type, target=-1, k=10):
         q_im = self._imread(query_image)
         distance = None
 
@@ -77,7 +77,7 @@ class ImageRetrieval:
 
         rank = np.argsort(distance)[:k]
 
-        if target:
+        if target != -1:
             ap = self.calculateAveragePrecision(rank, target, k)
             return ap
         else :
@@ -132,22 +132,6 @@ class ImageRetrieval:
         v_hist = [self._histogram(im[2]) for im in self.hsv_images]
 
         self.hsv_histogram = np.concatenate((h_hist, s_hist, v_hist), axis=1)
-
-    # this method is taken from
-    # http://vision.psych.umn.edu/users/kersten//kersten-lab/courses/Psy5036W2017/Lectures/17_PythonForVision/Demos
-    # /html/2b.Gabor.html
-    def _genGabor(self, sz, omega, theta, func=np.cos, K=np.pi):
-        radius = (int(sz[0] / 2.0), int(sz[1] / 2.0))
-        [x, y] = np.meshgrid(range(-radius[0], radius[0] + 1), range(-radius[1], radius[1] + 1))
-
-        x1 = x * np.cos(theta) + y * np.sin(theta)
-        y1 = -x * np.sin(theta) + y * np.cos(theta)
-
-        gauss = omega ** 2 / (4 * np.pi * K ** 2) * np.exp(- omega ** 2 / (8 * K ** 2) * (4 * x1 ** 2 + y1 ** 2))
-        sinusoid = func(omega * x1) * np.exp(K ** 2 / 2)
-        gabor = gauss * sinusoid
-
-        return gabor
 
     def _genFilterBank(self):
         filters = []
