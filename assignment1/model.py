@@ -164,5 +164,8 @@ class ImageRetrieval:
             i += 1
             if self.classes[index] == target_class:
                 trues += 1
-                precision.append(trues / i)
-        return np.mean(np.array(precision))
+                precision.append(float(trues) / float(i))
+        if precision:
+            return np.mean(np.array(precision))
+        else:
+            return 0
