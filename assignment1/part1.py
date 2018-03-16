@@ -115,6 +115,9 @@ def reduce_dim(datapath):
     mapped = VD.dot(M)
     plot1D(mapped, nameList)
 
-reduce_dim('Part1-dataset')
 
+if __name__ == '__main__':
+    import sys
 
+    path = sys.argv[1]
+    reduce_dim(datapath=path)

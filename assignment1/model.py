@@ -38,16 +38,17 @@ class ImageRetrieval:
         self.classes = np.array(self.classes)
 
     def train(self):
-        print("train has begun")
+        print("Model training has begun...This might take a few minutes.")
         self._saveData()
-        print("data saved")
+        print("All data saved to model.")
         self._histogramOfRgbs()
-        print("histogramOfRgbs Saved")
+        print("RGB histograms are calculated.")
         self._histogramOfHsvs()
-        print("histogramOfHsvs Saved")
+        print("HSV histograms are calculated.")
         self._genFilterBank()
-        print("filter bank generated")
         self._histogramOfGabors()
+        print("Gabor filtered images histograms are calculated.")
+        print("Training has done. Model is ready!")
 
     def query(self, query_image, type, target=-1, k=10):
         q_im = self._imread(query_image)
@@ -134,8 +135,7 @@ class ImageRetrieval:
         self.hsv_histogram = np.concatenate((h_hist, s_hist, v_hist), axis=1)
 
     def _genFilterBank(self):
-        filters = []
-        ksize = 31
+        ksize = 124
         for theta in np.arange(0, np.pi, np.pi / 16):
             kern = cv2.getGaborKernel((ksize, ksize), 4.0, theta, 10.0, 0.5, 0, ktype=cv2.CV_32F)
             kern /= 1.5 * kern.sum()
