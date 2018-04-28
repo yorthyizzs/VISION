@@ -35,7 +35,7 @@ def train(batchsize, num_epochs, freeze, lr):
     # GET THE VGG16 Pretrained model
     model = models.resnet18(pretrained=True)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.fc.parameters(), lr=lr, momentum=0.9)
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     softmax = nn.Softmax()
 
@@ -93,7 +93,7 @@ def train(batchsize, num_epochs, freeze, lr):
 
                 # forward
                 outputs = model(inputs)
-                outputs = softmax(outputs)
+                #outputs = softmax(outputs)
                 _, preds = torch.max(outputs.data, 1)
                 _, five_pred = outputs.topk(max((1, 5)), 1, True, True)
 
@@ -135,14 +135,15 @@ def train(batchsize, num_epochs, freeze, lr):
 
 if __name__ == '__main__':
     import sys
-    epoch = 10
-    batch = 128
+
+    epoch = int(sys.argv[1])
+    batch = int(sys.argv[1])
     freeze = None
     lr = 0.001
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         freeze = int(sys.argv[3])
     if len(sys.argv) == 5:
-        lr = int(sys.argv[4])
+        lr = float(sys.argv[4])
 
     results = train(batch, epoch, freeze, lr)
     print("RESULTS FOR : epoch = {}, batch = {}, freeze ={}, lr = {}".format(epoch,batch,freeze,lr))
@@ -150,3 +151,5 @@ if __name__ == '__main__':
         print(key)
         print(val)
         print('-'*30)
+
+

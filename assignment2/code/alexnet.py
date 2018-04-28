@@ -22,7 +22,7 @@ dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 class_names = image_datasets['train'].classes
 
 
-def train(batchsize, num_epochs, freeze, lr):
+def train(batchsize, num_epochs, lr):
     epoch_results = {}
 
     epoch_results['train-loss'] = []
@@ -33,9 +33,9 @@ def train(batchsize, num_epochs, freeze, lr):
     epoch_results['test-acc5'] = []
 
     # GET THE VGG16 Pretrained model
-    model = models.vgg16(pretrained=True)
+    model = models.alexnet(num_classes=len(class_names))
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.classifier._modules['6'].parameters(), lr=lr, momentum=0.9)
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     softmax = nn.Softmax()
 
@@ -43,18 +43,6 @@ def train(batchsize, num_epochs, freeze, lr):
                    ['train', 'test']}
     use_gpu = torch.cuda.is_available()
 
-    if freeze:
-        i = 0
-        for param in model.parameters():
-            param.requires_grad = False
-            i += 1
-            if i == freeze:
-                break
-    else:
-        for name, param in model.named_parameters():
-            param.requires_grad = False
-
-    model.classifier._modules['6'] = nn.Linear(4096, len(class_names))
     if use_gpu:
         model = model.cuda()
 
@@ -91,7 +79,7 @@ def train(batchsize, num_epochs, freeze, lr):
 
                 # forward
                 outputs = model(inputs)
-                outputs = softmax(outputs)
+                #outputs = softmax(outputs)
                 _, preds = torch.max(outputs.data, 1)
                 _, five_pred = outputs.topk(max((1, 5)), 1, True, True)
 
@@ -133,17 +121,15 @@ def train(batchsize, num_epochs, freeze, lr):
 
 if __name__ == '__main__':
     import sys
+
     epoch = int(sys.argv[1])
     batch = int(sys.argv[2])
-    freeze = None
     lr = 0.001
     if len(sys.argv) == 4:
-        freeze = int(sys.argv[3])
-    if len(sys.argv) == 5:
-        lr = int(sys.argv[4])
+        lr = float(sys.argv[3])
 
-    results = train(batch, epoch, freeze, lr)
-    print("RESULTS FOR : epoch = {}, batch = {}, freeze ={}, lr = {}".format(epoch,batch,freeze,lr))
+    results = train(batch, epoch,  lr)
+    print("RESULTS FOR : epoch = {}, batch = {}, lr = {}".format(epoch,batch,lr))
     for key, val in results.items():
         print(key)
         print(val)

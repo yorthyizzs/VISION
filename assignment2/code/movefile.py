@@ -17,9 +17,3 @@ for line in testfile.readlines():
         os.makedirs('test/'+line.split('/')[0])
     shutil.copy2('dataset/Images/'+line, 'test/'+line)
 
-
-classes = ['airport_inside', 'bakery', 'bar', 'bedroom', 'bookstore',
-           'children_room', 'classroom', 'clothingstore', 'computerroom',
-           'concert_hall', 'dentaloffice', 'dining_room', 'grocerystore',
-           'gym', 'hairsalon', 'inside_bus', 'kitchen', 'library',
-           'prisoncell', 'subway']

@@ -11,7 +11,8 @@ import copy
 data_transforms = {
         'train': transforms.Compose(
             [transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(), transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]), 'test': transforms.Compose(
+                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
+        'test': transforms.Compose(
             [transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
     }
@@ -22,27 +23,42 @@ dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 class_names = image_datasets['train'].classes
 
 
-def train(batchsize, num_epochs, lr):
+def train(batchsize, num_epochs, freeze, lr):
     epoch_results = {}
 
     epoch_results['train-loss'] = []
     epoch_results['test-loss'] = []
     epoch_results['train-acc'] = []
     epoch_results['train-acc5'] = []
+    epoch_results['train-err5'] = []
     epoch_results['test-acc'] = []
     epoch_results['test-acc5'] = []
+    epoch_results['test-err5'] = []
 
     # GET THE VGG16 Pretrained model
-    model = models.alexnet(num_classes=len(class_names))
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.classifier._modules['6'].parameters(), lr=lr, momentum=0.9)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
-    softmax = nn.Softmax()
+    model = models.vgg16(pretrained=True)
+    #softmax = nn.Softmax()
 
     dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batchsize, shuffle=True) for x in
                    ['train', 'test']}
     use_gpu = torch.cuda.is_available()
 
+    if freeze:
+        i = 0
+        for param in model.parameters():
+            param.requires_grad = False
+            i += 1
+            if i == freeze:
+                break
+    else:
+        for name, param in model.named_parameters():
+            param.requires_grad = False
+
+    model.classifier._modules['6'] = nn.Linear(4096, len(class_names))
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=lr, momentum=0.9)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
     if use_gpu:
         model = model.cuda()
 
@@ -79,7 +95,7 @@ def train(batchsize, num_epochs, lr):
 
                 # forward
                 outputs = model(inputs)
-                outputs = softmax(outputs)
+                #outputs = softmax(outputs)
                 _, preds = torch.max(outputs.data, 1)
                 _, five_pred = outputs.topk(max((1, 5)), 1, True, True)
 
@@ -99,16 +115,19 @@ def train(batchsize, num_epochs, lr):
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects_top1 / dataset_sizes[phase]
             epoch_acc5 = running_corrects_top5 / dataset_sizes[phase]
+            epoch_err5 = 1 - epoch_acc5
 
             #collect the statistics
             if phase == 'train':
                 epoch_results['train-loss'].append(epoch_loss)
                 epoch_results['train-acc'].append(epoch_acc)
                 epoch_results['train-acc5'].append(epoch_acc5)
+                epoch_results['train-err5'].append(epoch_err5)
             else:
                 epoch_results['test-loss'].append(epoch_loss)
                 epoch_results['test-acc'].append(epoch_acc)
                 epoch_results['test-acc5'].append(epoch_acc5)
+                epoch_results['test-err5'].append(epoch_err5)
 
             if phase == 'test' and epoch_acc > best_acc:
                 best_acc = epoch_acc
@@ -121,14 +140,17 @@ def train(batchsize, num_epochs, lr):
 
 if __name__ == '__main__':
     import sys
-    epoch = 10
-    batch = 128
+    epoch = int(sys.argv[1])
+    batch = int(sys.argv[1])
+    freeze = None
     lr = 0.001
-    if len(sys.argv) == 4:
-        lr = int(sys.argv[3])
+    if len(sys.argv) >= 4:
+        freeze = int(sys.argv[3])
+    if len(sys.argv) == 5:
+        lr = float(sys.argv[4])
 
-    results = train(batch, epoch,  lr)
-    print("RESULTS FOR : epoch = {}, batch = {}, lr = {}".format(epoch,batch,lr))
+    print("RESULTS FOR : epoch = {}, batch = {}, freeze ={}, lr = {}".format(epoch, batch, freeze, lr))
+    results = train(batch, epoch, freeze, lr)
     for key, val in results.items():
         print(key)
         print(val)
