@@ -8,7 +8,7 @@ Resnet18 and Vgg16 Parameters are like following :
 
 * argv[1]= epoch 
 * argv[2] = batch size
----optionals:
+--optionals:
 * argv[3] = freezed parameter number(this should be 2*layer which will freeze)
 (default = train only changed layer)
 * argv[4] = learning rate
