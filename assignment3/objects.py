@@ -5,6 +5,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 from PIL import Image, ImageChops
+from sklearn.decomposition import PCA
 
 class Emotion:
     def __init__(self, label):
@@ -25,14 +26,16 @@ class Emotion:
             data.train(usebase=usebase)
 
     def getData(self):
-        f1, f2, f3, f4= [], [], [], []
+        f1, f2, f3, f4, f5, f6 = [], [], [], [], [], []
         for data in self.datas:
             f1.extend(data.mag)
             f2.extend(data.ang)
             f3.extend(data.vgg)
             f4.extend(data.resnet)
+            f5.extend(data.mag_pca)
+            f6.extend(data.ang_pca)
         lbls = [self.label for i in range(len(f1))]
-        return f1, f2, f3, f4, lbls
+        return f1, f2, f3, f4, f5, f6, lbls
 
 
 class Data:
@@ -43,17 +46,16 @@ class Data:
         self.mag = []
         self.vgg = []
         self.resnet = []
+        self.ang_pca = []
+        self.mag_pca = []
 
     def train(self, usebase=True):
         self.__opticFlowFeatures(usebase=usebase)
         self.__modelFeature(usebase=usebase)
         self.__modelFeature(usebase=usebase, model='resnet')
 
-    def __extractFacial(self, im, eyes=False):
-        if eyes:
-            cascade = cv2.CascadeClassifier('frontalEyes35x16.xml')
-        else:
-            cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    def __extractFacial(self, im):
+        cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
         img = cv2.imread(im)
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -65,6 +67,7 @@ class Data:
 
     def __opticFlowFeatures(self, usebase=True):
         base_im = cv2.cvtColor(cv2.imread(self.base), cv2.COLOR_BGR2GRAY)
+        pca = PCA(n_components=10)
         for i in range(1, len(self.sequence)):
             x, y, w, h = self.__extractFacial(self.sequence[i-1])
             t_base = base_im
@@ -85,6 +88,14 @@ class Data:
             mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
             hsv[:, :, 0] = ang * 180 / np.pi / 2
             hsv[:, :, 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+
+            ##### hold the pc of the features ###
+            pca.fit(hsv[:, :, 0])
+            self.ang_pca.append(pca.singular_values_)
+            pca.fit(hsv[:, :, 1])
+            self.mag_pca.append(pca.singular_values_)
+            #######################################
+
             self.ang.append(np.array(hsv[:, :, 0]).flatten())
             self.mag.append(np.array(hsv[:, :, 1]).flatten())
             #rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
@@ -98,11 +109,12 @@ class Data:
         if model == 'vgg':
             modal = models.vgg16(pretrained=True)
             modal.classifier = nn.Sequential(*list(modal.classifier.children())[:-1])
-            modal.eval()
+
         elif model == 'resnet':
             modal = models.resnet152(pretrained=True)
             modal = nn.Sequential(*list(modal.children())[:-1])
 
+        modal.eval()
         for p in modal.parameters():
             p.requires_grad = False
 
