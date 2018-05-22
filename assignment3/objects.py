@@ -25,13 +25,14 @@ class Emotion:
             data.train(usebase=usebase)
 
     def getData(self):
-        f1, f2, f3= [], [], []
+        f1, f2, f3, f4= [], [], [], []
         for data in self.datas:
             f1.extend(data.mag)
             f2.extend(data.ang)
             f3.extend(data.vgg)
+            f4.extend(data.resnet)
         lbls = [self.label for i in range(len(f1))]
-        return f1, f2, f3, lbls
+        return f1, f2, f3, f4, lbls
 
 
 class Data:
@@ -41,10 +42,12 @@ class Data:
         self.ang = []
         self.mag = []
         self.vgg = []
+        self.resnet = []
 
     def train(self, usebase=True):
         self.__opticFlowFeatures(usebase=usebase)
         self.__modelFeature(usebase=usebase)
+        self.__modelFeature(usebase=usebase, model='resnet')
 
     def __extractFacial(self, im, eyes=False):
         if eyes:
@@ -87,15 +90,24 @@ class Data:
             #rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
 
     def __modelFeature(self, usebase, model='vgg'):
-        vgg16 = models.vgg16(pretrained=True)
         scaler = transforms.Resize((224, 224))
         normalizer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         to_tensorer = transforms.ToTensor()
-        new_classifier = nn.Sequential(*list(vgg16.classifier.children())[:-1])
-        vgg16.classifier = new_classifier
-        vgg16.eval()
+        modal = None
+
+        if model == 'vgg':
+            modal = models.vgg16(pretrained=True)
+            modal.classifier = nn.Sequential(*list(modal.classifier.children())[:-1])
+            modal.eval()
+        elif model == 'resnet':
+            modal = models.resnet152(pretrained=True)
+            modal = nn.Sequential(*list(modal.children())[:-1])
+
+        for p in modal.parameters():
+            p.requires_grad = False
 
         base = Image.open(self.base).convert('RGB')
+        feature_arr = []
         for i in range(1, len(self.sequence)):
             img = Image.open(self.sequence[i]).convert('RGB')
             x, y, w, h = self.__extractFacial(self.sequence[i])
@@ -104,13 +116,14 @@ class Data:
 
             if usebase:
                 img = ImageChops.subtract(img, t_base)
+
             t_img = Variable(normalizer(to_tensorer(scaler(img))).unsqueeze(0))
-            preds = vgg16(t_img)
-            self.vgg.append(preds.data.numpy()[0])
+            preds = modal(t_img)
+            feature_arr.append(preds.data.numpy()[0])
 
+        if model == 'vgg':
+            self.vgg = feature_arr
+        elif model == 'resnet':
+            self.resnet = feature_arr
 
-
-
-
-d=Data('DATA/TRAIN/surprise/S011/001/S011_001_00000013.png', ['DATA/TRAIN/surprise/S011/001/S011_001_00000016.png', 'DATA/TRAIN/surprise/S011/001/S011_001_00000015.png', 'DATA/TRAIN/surprise/S011/001/S011_001_00000016.png'])
 

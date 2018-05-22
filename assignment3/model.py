@@ -2,6 +2,7 @@ import objects
 import glob
 import pickle
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn import svm
 
 class Model:
     def __init__(self, file):
@@ -37,13 +38,13 @@ class Model:
 
     def train(self, types, usebase=True, model='knn', fromPickle=False):
         if fromPickle:
-            with open('train.pickle', 'rb') as handle:
-                f1, f2, f3, lbls = pickle.load(handle)
-            traindata, trainlabels = self.__mergeFeatures(types,f1,f2,f3), lbls
+            with open('pickles/train_b.pickle', 'rb') as handle:
+                f1, f2, f3, f4, lbls = pickle.load(handle)
+            traindata, trainlabels = self.__mergeFeatures(types,f1,f2,f3,f4), lbls
 
-            with open('test.pickle', 'rb') as handle:
-                f1, f2, f3, lbls = pickle.load(handle)
-            testdata, testlabels =self.__mergeFeatures(types,f1,f2,f3), lbls
+            with open('pickles/test_b.pickle', 'rb') as handle:
+                f1, f2, f3, f4, lbls = pickle.load(handle)
+            testdata, testlabels =self.__mergeFeatures(types,f1,f2,f3,f4), lbls
 
         else:
             self.__fit(usebase)
@@ -56,25 +57,32 @@ class Model:
             results = neigh.predict(testdata)
             print('Accuracy results of KNN {}'.format(self.__accuracy(results, testlabels)))
 
+        elif model == 'svm':
+            clf = svm.SVC(decision_function_shape='ovo')
+            clf.fit(traindata, trainlabels)
+            results = clf.predict(testdata)
+            print('Accuracy results of SVM {}'.format(self.__accuracy(results, testlabels)))
+
+
     def saveAsPickle(self):
-        types = ['mag', 'ang', 'vgg']
+        types = ['mag', 'ang', 'vgg', 'resnet']
         self.__fit(usebase=True)
 
-        f1, f2, f3, lbls = self.__getFeatures(types, picklesave=True)
+        f1, f2, f3,f4, lbls = self.__getFeatures(types, picklesave=True)
         with open('train.pickle', 'wb') as handle:
             pickle.dump((f1,f2,f3,lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        f1, f2, f3, lbls = self.__getFeatures(types, train=False, picklesave=True)
+        f1, f2, f3,f4, lbls = self.__getFeatures(types, train=False, picklesave=True)
         with open('test.pickle', 'wb') as handle:
             pickle.dump((f1,f2,f3,lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         self.__fit(usebase=False)
 
-        f1, f2, f3, lbls = self.__getFeatures(types, picklesave=True)
+        f1, f2, f3,f4, lbls = self.__getFeatures(types, picklesave=True)
         with open('train_b.pickle', 'wb') as handle:
             pickle.dump((f1, f2, f3, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-        f1, f2, f3, lbls = self.__getFeatures(types, train=False, picklesave=True)
+        f1, f2, f3,f4, lbls = self.__getFeatures(types, train=False, picklesave=True)
         with open('test_b.pickle', 'wb') as handle:
             pickle.dump((f1, f2, f3, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -93,25 +101,27 @@ class Model:
 
     def __getFeatures(self, types, train=True, picklesave=False):
         emotions = self.trainEmotions if train else self.testEmotions
-        f1, f2, f3, lbls = [], [], [], []
+        f1, f2, f3, f4, lbls = [], [], [], [], []
         for emotion in emotions:
-            t1, t2, t3, tlbls = emotion.getData()
+            t1, t2, t3, t4, tlbls = emotion.getData()
             f1.extend(t1)
             f2.extend(t2)
             f3.extend(t3)
+            f4.extend(t4)
             lbls.extend(tlbls)
         if not picklesave:
-            return self.__mergeFeatures(types,f1,f2,f3), lbls
+            return self.__mergeFeatures(types,f1,f2,f3,f4), lbls
         else:
-            return f1,f2,f3,lbls
+            return f1,f2,f3,f4,lbls
 
-    def __mergeFeatures(self, types, f1, f2, f3):
+    def __mergeFeatures(self, types, f1, f2, f3,f4):
         feats = []
         for i in range(len(f1)):
             feature = []
             if 'mag' in types: feature.extend(f1[i])
             if 'ang' in types: feature.extend(f2[i])
             if 'vgg' in types: feature.extend(f3[i])
+            if 'resnet' in types: feature.extend(f4[i])
             feats.append(feature)
         return feats
 
@@ -120,7 +130,7 @@ if __name__ == '__main__':
     types = [ 'vgg']
     m = Model('DATA')
     #m.saveAsPickle()
-    m.train(types=types, fromPickle=True)
+    m.train(types=types,model='svm', fromPickle=True)
 
 
 
