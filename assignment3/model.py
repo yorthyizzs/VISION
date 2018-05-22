@@ -38,11 +38,11 @@ class Model:
 
     def train(self, types, usebase=True, model='knn', fromPickle=False):
         if fromPickle:
-            with open('pickles/train_b.pickle', 'rb') as handle:
+            with open('train.pickle', 'rb') as handle:
                 f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
             traindata, trainlabels = self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
 
-            with open('pickles/test_b.pickle', 'rb') as handle:
+            with open('test.pickle', 'rb') as handle:
                 f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
             testdata, testlabels =self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
 
@@ -131,7 +131,7 @@ class Model:
 
 
 if __name__ == '__main__':
-    types = [ 'mag_pca']
+    types = [ 'resnet']
     m = Model('DATA')
     m.saveAsPickle()
     m.train(types=types, model='svm', fromPickle=True)

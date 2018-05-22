@@ -41,7 +41,9 @@ class Emotion:
 class Data:
     def __init__(self, base, sequence):
         self.base = base
-        self.sequence = sequence
+        # as sometime glob does not read in sorted order for some cases
+        # to hold the sequence ordered sorted method is used here
+        self.sequence = sorted(sequence)
         self.ang = []
         self.mag = []
         self.vgg = []
@@ -131,7 +133,7 @@ class Data:
 
             t_img = Variable(normalizer(to_tensorer(scaler(img))).unsqueeze(0))
             preds = modal(t_img)
-            feature_arr.append(preds.data.numpy()[0])
+            feature_arr.append(preds.data.numpy().flatten())
 
         if model == 'vgg':
             self.vgg = feature_arr
