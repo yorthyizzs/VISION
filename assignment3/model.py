@@ -2,6 +2,8 @@ import objects
 import glob
 import pickle
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+import numpy as np
 from sklearn import svm
 
 class Model:
@@ -63,9 +65,14 @@ class Model:
             results = clf.predict(testdata)
             print('Accuracy results of SVM {}'.format(self.__accuracy(results, testlabels)))
 
+        elif model == 'perceptron':
+            clf = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(len(traindata[0]), 100, 7), random_state=1)
+            clf.fit(traindata, trainlabels)
+            results = clf.predict(testdata)
+            print('Accuracy results of Perceptron {}'.format(self.__accuracy(results, testlabels)))
 
     def saveAsPickle(self):
-        types = ['mag', 'ang', 'vgg', 'resnet', 'mag_pca', 'ang_pca',]
+        types = ['mag', 'ang', 'vgg', 'resnet', 'mag_pca', 'ang_pca']
         self.__fit(usebase=True)
 
         f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, picklesave=True)
@@ -126,15 +133,20 @@ class Model:
             if 'resnet' in types: feature.extend(f4[i])
             if 'mag_pca' in types: feature.extend(f5[i])
             if 'ang_pca' in types: feature.extend(f6[i])
-            feats.append(feature)
+            feature = np.array(feature)
+            feats.append((feature-np.min(feature))/(np.max(feature)-np.min(feature)))
         return feats
 
 
 if __name__ == '__main__':
-    types = [ 'resnet']
+    types = [ ['mag_pca', 'ang_pca'], ['vgg', 'resnet'], ['mag_pca', 'resnet'], ['ang_pca', 'resnet'], ['mag_pca', 'vgg'], ['ang_pca', 'vgg']]
+    #types = ['vgg', 'resnet', 'mag_pca', 'ang_pca']
+    #types = ['ang', 'mag', 'mag_pca', 'ang_pca']
+    #types = ['vgg', 'resnet', 'mag_pca', 'ang_pca']
     m = Model('DATA')
     m.saveAsPickle()
-    m.train(types=types, model='svm', fromPickle=True)
+    m.train(types=['mag'], model='knn', fromPickle=True)
+
 
 
 

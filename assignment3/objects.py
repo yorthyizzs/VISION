@@ -84,22 +84,22 @@ class Data:
                 next_im -= t_base
             previous_im = cv2.resize(previous_im, (224, 224))
             next_im = cv2.resize(next_im, (224, 224))
-            hsv = np.zeros_like(cv2.cvtColor(previous_im, cv2.COLOR_GRAY2BGR))
-            hsv[:, :, 1] = 255
+            angular = np.zeros_like(previous_im)
+            magnitude = np.zeros_like(previous_im)
             flow = cv2.calcOpticalFlowFarneback(previous_im, next_im, None, 0.5, 3, 15, 3, 5, 1.2, 0)
             mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-            hsv[:, :, 0] = ang * 180 / np.pi / 2
-            hsv[:, :, 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
+            angular = ang * 180 / np.pi / 2
+            magnitude = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
 
             ##### hold the pc of the features ###
-            pca.fit(hsv[:, :, 0])
+            pca.fit(angular)
             self.ang_pca.append(pca.singular_values_)
-            pca.fit(hsv[:, :, 1])
+            pca.fit(magnitude)
             self.mag_pca.append(pca.singular_values_)
             #######################################
 
-            self.ang.append(np.array(hsv[:, :, 0]).flatten())
-            self.mag.append(np.array(hsv[:, :, 1]).flatten())
+            self.ang.append(np.array(angular).flatten())
+            self.mag.append(np.array(magnitude).flatten())
             #rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
 
     def __modelFeature(self, usebase, model='vgg'):
