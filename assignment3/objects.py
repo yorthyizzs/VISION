@@ -93,14 +93,17 @@ class Data:
 
             ##### hold the pc of the features ###
             pca.fit(angular)
-            self.ang_pca.append(pca.singular_values_)
+            self.ang_pca.append(self.__normalize(pca.singular_values_))
             pca.fit(magnitude)
-            self.mag_pca.append(pca.singular_values_)
+            self.mag_pca.append(self.__normalize(pca.singular_values_))
             #######################################
 
-            self.ang.append(np.array(angular).flatten())
-            self.mag.append(np.array(magnitude).flatten())
+            self.ang.append(self.__normalize(np.array(angular).flatten()))
+            self.mag.append(self.__normalize(np.array(magnitude).flatten()))
             #rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+
+    def __normalize(self, feature):
+        return (feature-np.min(feature))/(np.max(feature)-np.min(feature))
 
     def __modelFeature(self, usebase, model='vgg'):
         scaler = transforms.Resize((224, 224))
@@ -133,7 +136,7 @@ class Data:
 
             t_img = Variable(normalizer(to_tensorer(scaler(img))).unsqueeze(0))
             preds = modal(t_img)
-            feature_arr.append(preds.data.numpy().flatten())
+            feature_arr.append(self.__normalize(preds.data.numpy().flatten()))
 
         if model == 'vgg':
             self.vgg = feature_arr

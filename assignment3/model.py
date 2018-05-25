@@ -40,13 +40,22 @@ class Model:
 
     def train(self, types, usebase=True, model='knn', fromPickle=False):
         if fromPickle:
-            with open('train.pickle', 'rb') as handle:
-                f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
-            traindata, trainlabels = self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
+            if usebase
+                with open('train.pickle', 'rb') as handle:
+                    f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
+                traindata, trainlabels = self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
 
-            with open('test.pickle', 'rb') as handle:
-                f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
-            testdata, testlabels =self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
+                with open('test.pickle', 'rb') as handle:
+                    f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
+                testdata, testlabels =self.__mergeFeatures(types,f1, f2, f3, f4, f5, f6), lbls
+            else:
+                with open('train_b.pickle', 'rb') as handle:
+                    f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
+                traindata, trainlabels = self.__mergeFeatures(types, f1, f2, f3, f4, f5, f6), lbls
+
+                with open('test_b.pickle', 'rb') as handle:
+                    f1, f2, f3, f4, f5, f6, lbls = pickle.load(handle)
+                testdata, testlabels = self.__mergeFeatures(types, f1, f2, f3, f4, f5, f6), lbls
 
         else:
             self.__fit(usebase)
@@ -54,13 +63,13 @@ class Model:
             testdata, testlabels = self.__getFeatures(types, train=False)
 
         if model == 'knn':
-            neigh = KNeighborsClassifier(n_neighbors=27)
+            neigh = KNeighborsClassifier(n_neighbors=37)
             neigh.fit(traindata, trainlabels)
             results = neigh.predict(testdata)
             print('Accuracy results of KNN {}'.format(self.__accuracy(results, testlabels)))
 
         elif model == 'svm':
-            clf = svm.SVC(decision_function_shape='ovo')
+            clf = svm.SVC(decision_function_shape='ovo', kernel='linear')
             clf.fit(traindata, trainlabels)
             results = clf.predict(testdata)
             print('Accuracy results of SVM {}'.format(self.__accuracy(results, testlabels)))
@@ -71,27 +80,30 @@ class Model:
             results = clf.predict(testdata)
             print('Accuracy results of Perceptron {}'.format(self.__accuracy(results, testlabels)))
 
-    def saveAsPickle(self):
+    def saveAsPickle(self, usebase = True):
         types = ['mag', 'ang', 'vgg', 'resnet', 'mag_pca', 'ang_pca']
-        self.__fit(usebase=True)
+        if usebase:
 
-        f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, picklesave=True)
-        with open('train.pickle', 'wb') as handle:
-            pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
+            self.__fit(usebase=True)
 
-        f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, train=False, picklesave=True)
-        with open('test.pickle', 'wb') as handle:
-            pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-        self.__fit(usebase=False)
-
-        f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, picklesave=True)
-        with open('train_b.pickle', 'wb') as handle:
-            pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
+            f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, picklesave=True)
+            with open('train.pickle', 'wb') as handle:
+                pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
             f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, train=False, picklesave=True)
-        with open('test_b.pickle', 'wb') as handle:
-            pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open('test.pickle', 'wb') as handle:
+                pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        else:
+            self.__fit(usebase=False)
+
+            f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, picklesave=True)
+            with open('train_b.pickle', 'wb') as handle:
+                pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+                f1, f2, f3, f4, f5, f6, lbls = self.__getFeatures(types, train=False, picklesave=True)
+            with open('test_b.pickle', 'wb') as handle:
+                pickle.dump((f1, f2, f3, f4, f5, f6, lbls), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
     def __accuracy(self, labels, testLabels):
@@ -139,13 +151,19 @@ class Model:
 
 
 if __name__ == '__main__':
-    types = [ ['mag_pca', 'ang_pca'], ['vgg', 'resnet'], ['mag_pca', 'resnet'], ['ang_pca', 'resnet'], ['mag_pca', 'vgg'], ['ang_pca', 'vgg']]
+    #types = [ ['mag_pca', 'ang_pca'], ['vgg', 'resnet'], ['mag_pca', 'resnet'], ['ang_pca', 'resnet'], ['mag_pca', 'vgg'], ['ang_pca', 'vgg']]
     #types = ['vgg', 'resnet', 'mag_pca', 'ang_pca']
-    #types = ['ang', 'mag', 'mag_pca', 'ang_pca']
-    #types = ['vgg', 'resnet', 'mag_pca', 'ang_pca']
+    #types = [['ang'], ['mag'], ['mag_pca'], ['ang_pca']]
+    #types = [['vgg'], ['resnet'], ['mag_pca'], ['ang_pca'], ['ang'], ['mag']]
+    types = [['vgg'], ['resnet'], ['mag_pca'], ['ang_pca']]
+    #types=[['vgg', 'resnet', 'mag_pca', 'ang_pca']]
     m = Model('DATA')
-    m.saveAsPickle()
-    m.train(types=['mag'], model='knn', fromPickle=True)
+    #m.saveAsPickle(usebase=True)
+    for typeset in types:
+        print("Results for {}".format(typeset))
+        m.train(types=typeset, model='knn', fromPickle=True)
+        m.train(types=typeset, model='svm', fromPickle=True)
+        m.train(types=typeset, model='perceptron', fromPickle=True)
 
 
 
