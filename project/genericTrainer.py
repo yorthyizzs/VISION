@@ -1,13 +1,7 @@
 from __future__ import print_function, division
-
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
 import numpy as np
-import torchvision
-from torchvision import datasets, models, transforms
-import matplotlib.pyplot as plt
+from torchvision import datasets,transforms
 import time
 import os
 import copy
@@ -34,7 +28,7 @@ image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                           data_transforms[x])
                   for x in ['train', 'val']}
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=16,
-                                             shuffle=True, num_workers=4)
+                                             shuffle=True, num_workers=6)
               for x in ['train', 'val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
@@ -51,9 +45,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
-
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
+            tn, tp, fn, fp = 0, 0, 0, 0
             if phase == 'train':
                 scheduler.step()
                 model.train()  # Set model to training mode
@@ -86,12 +80,21 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
                 # statistics
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
+                pred_labels = preds.numpy().flatten()
+                true_labels = labels.data.numpy()
+                tn += np.sum(np.logical_and(pred_labels == 1, true_labels == 1))
+                tp += np.sum(np.logical_and(pred_labels == 0, true_labels == 0))
+                fn += np.sum(np.logical_and(pred_labels == 1, true_labels == 0))
+                fp += np.sum(np.logical_and(pred_labels == 0, true_labels == 1))
 
             epoch_loss = running_loss / dataset_sizes[phase]
             epoch_acc = running_corrects.double() / dataset_sizes[phase]
 
+
+
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
+            print('tn = {}, fp = {}, fn = {}, tp = {}'.format(tn, fp, fn, tp))
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:

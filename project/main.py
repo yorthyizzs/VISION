@@ -9,7 +9,7 @@ import pickle
 if __name__ == '__main__':
     import sys
 
-    model = 'resnet152'
+    model = 'alexnet'
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model_ft = None
@@ -20,33 +20,32 @@ if __name__ == '__main__':
         model_ft.fc = nn.Linear(num_ftrs, 2)
         count = 0
         for name, param in model_ft.named_parameters():
-            # print(param,count)
             param.requires_grad = False
             count += 1
             if count == 150:
-                break  # print(count)
+                break
     elif model == 'resnet152':
         model_ft = models.resnet152(pretrained=True)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, 2)
         count = 0
         for name, param in model_ft.named_parameters():
-            # print(param,count)
             param.requires_grad = False
             count += 1
             if count == 456:
-                break  # print(count)
+                break
     elif model == 'vgg16':
         model_ft = models.vgg16(pretrained=True)
         num_ftrs = model_ft.classifier._modules['6'].in_features
         model_ft.classifier._modules['6'] = nn.Linear(num_ftrs, 2)
         count = 0
         for name, param in model_ft.named_parameters():
-            # print(param,count)
             param.requires_grad = False
             count += 1
             if count == 26:
-                break  # print(count)
+                break
+    elif model == 'alexnet':
+        model_ft = models.alexnet(num_classes=2)
 
     model_ft = model_ft.to(device)
     criterion = nn.CrossEntropyLoss()
@@ -62,5 +61,4 @@ if __name__ == '__main__':
 
     with open('{}.pickle'.format(model), 'wb') as handle:
         pickle.dump(model_ft, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    #model_ft.save_state_dict('{}_model.pt'.format(model))
     torch.save(model_ft.state_dict(), '{}_model.pt'.format(model))
