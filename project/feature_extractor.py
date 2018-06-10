@@ -6,6 +6,8 @@ import pickle
 from PIL import Image
 import torch.nn as nn
 import json
+import numpy as np
+import cv2
 
 def readFileNamesAndLabels():
     trainim = []
@@ -69,4 +71,51 @@ def saveTestData():
         pickle.dump((features,ids ), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-saveTestData()
+
+## https://gist.github.com/odebeir/5237529
+def build_filters():
+    """ returns a list of kernels in several orientations
+    """
+    filters = []
+    ksize = 31
+    for theta in np.arange(0, np.pi, np.pi / 32):
+        params = {'ksize':(ksize, ksize), 'sigma':1.0, 'theta':theta, 'lambd':15.0,
+                  'gamma':0.02, 'psi':0, 'ktype':cv2.CV_32F}
+        kern = cv2.getGaborKernel(**params)
+        kern /= 1.5*kern.sum()
+        filters.append((kern,params))
+    return filters
+
+
+def process(im, filters):
+    """ returns the img filtered by the filter list
+    """
+    img = cv2.imread(im)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    accum = np.zeros_like(img)
+    for kern,params in filters:
+        fimg = cv2.filter2D(img, cv2.CV_8UC3, kern)
+        np.maximum(accum, fimg, accum)
+    return np.array(accum).flatten()
+###
+
+def extractGaborFeatures(images):
+    filters = build_filters()
+    feats = []
+    for im in images:
+        feats.append(process(im, filters))
+    return feats
+
+def saveGaborFeatures():
+    trainim, valim, trainlabel, vallabel = readFileNamesAndLabels()
+    trainfeats = extractGaborFeatures(trainim)
+    valfeats = extractGaborFeatures(valim)
+
+    with open('train_gabor_lbl.pickle', 'wb') as handle:
+        pickle.dump((trainfeats, trainlabel), handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('val_gabor_lbl.pickle', 'wb') as handle:
+        pickle.dump((valfeats, vallabel), handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+saveGaborFeatures()

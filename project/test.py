@@ -1,16 +1,15 @@
 import json
-import torchvision.models as models
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 import pickle
 from PIL import Image
 import torch
 from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 
-def model():
+def model(mname):
     data = json.load(open('test_set.json'))
-    mname = 'resnet50'
 
     imnames = []
     for im in data['images']:
@@ -23,7 +22,7 @@ def model():
     with open('models/{}.pickle'.format(mname), 'rb') as handle:
         model = pickle.load(handle)
     model.eval()
-    fp = open('model.csv', 'w')
+    fp = open('model{}.csv'.format(mname), 'w')
     fp.write('id,label\n')
     for im in imnames:
         img = Image.open(im).convert('RGB')
@@ -48,4 +47,19 @@ def perceptron():
     for res, id in zip(results, ids):
         fp.write('train_val/{}.jpg,{}\n'.format(id, res))
 
-model()
+def knn():
+    with open('train_feat_lbl.pickle', 'rb') as handle:
+        (trainfeats, trainlabel) = pickle.load(handle)
+
+    with open('test_feats.pickle', 'rb') as handle:
+        (features, ids) = pickle.load(handle)
+
+    neigh = KNeighborsClassifier(n_neighbors=1)
+    neigh.fit(trainfeats, trainlabel)
+    results = neigh.predict(features)
+    fp = open('knn.csv', 'w')
+    fp.write('id,label\n')
+    for res, id in zip(results, ids):
+        fp.write('train_val/{}.jpg,{}\n'.format(id, res))
+
+model('vgg16')
